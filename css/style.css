@@ -102,6 +102,10 @@ a:link, a:visited {
     font-weight: bold;
 }
 
+button {
+    color: var(--text);
+}
+
 a:hover {
     color: var(--text);
     text-decoration: none;
