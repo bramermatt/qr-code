@@ -33,8 +33,9 @@
     <div id="qr-code"></div>
 
     <div class="export">
-        <button id="export-png" hidden><i class="fa-solid fa-file-image"></i> Export to PNG</button>
-        <button id="export-pdf" hidden><i class="fa-solid fa-file-pdf"></i> Export to PDF</button>
+        <button id="export-png" hidden><i class="fa-solid fa-file-image"></i> PNG</button>
+        <button id="export-pdf" hidden><i class="fa-solid fa-file-pdf"></i> PDF</button>
+        <!-- <button id="copy-to-clipboard" hidden><i class="fa-solid fa-file-clipboard"></i> Copy</button> -->
         <!-- <button id="export-svg" hidden><i class="fa-solid fa-file-code"></i> Export to SVG</button> -->
         <!-- <button id="export-jpeg" hidden><i class="fa-solid fa-file-image"></i> Export to JPEG</button> -->
         <!-- <button id="export-gif" hidden><i class="fa-solid fa-file-image"></i> Export to GIF</button> -->
@@ -43,6 +44,12 @@
     <div class="recent" hidden>
         <h2>Recently Generated</h2>
         <ul id="recent-list"></ul>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <span id="toast-message"></span>
+        <button id="close-toast">&times;</button>
     </div>
 
 

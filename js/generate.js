@@ -15,6 +15,7 @@ function generateQRCode() {
         // Show export buttons
         document.getElementById("export-png").hidden = false;
         document.getElementById("export-pdf").hidden = false;
+        document.getElementById("copy-to-clipboard").hidden = false;
         // document.getElementById("export-svg").hidden = false;
         // document.getElementById("export-jpeg").hidden = false;
         // document.getElementById("export-gif").hidden = false;
@@ -111,6 +112,38 @@ function exportToGIF(inputText) {
         link.click();
     });
 }
+document.getElementById("copy-to-clipboard").addEventListener("click", function () {
+        var inputText = document.getElementById("qr-input").value;
+        if (inputText) {
+            navigator.clipboard.writeText(inputText).then(function () {
+                showToast("Copied to clipboard: " + inputText);
+            }).catch(function (error) {
+                console.error("Could not copy text: ", error);
+            });
+        }
+
+    // Show toast notification
+    function showToast(message) {
+        var toast = document.getElementById("toast");
+        var toastMessage = document.getElementById("toast-message");
+
+        toastMessage.textContent = message;
+        toast.classList.add("show");
+
+        // Auto-hide after 3 seconds
+        setTimeout(function () {
+            toast.classList.remove("show");
+        }, 3000);
+    }
+
+    // Manual close for toast
+    document.getElementById("close-toast").addEventListener("click", function () {
+        document.getElementById("toast").classList.remove("show");
+    });
+});
+
+
+
 
 function addRecentQRCode(inputText) {
     var recentQRCodes = getRecentQRCodes();
@@ -184,3 +217,7 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("qr-input").focus();
     renderRecentQRCodes();
 });
+
+
+
+
