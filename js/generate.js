@@ -9,8 +9,11 @@ function generateQRCode() {
     if (inputText) {
         var qrCodeContainer = document.getElementById("qr-code");
         qrCodeContainer.innerHTML = ""; // Clear previous QR code
-        new QRCode(qrCodeContainer, inputText);
-        addRecentQRCode(inputText);
+        new QRCode(qrCodeContainer, {
+            text: inputText,
+            width: 200,
+            height: 200
+        });
 
         // Show export buttons
         document.getElementById("export-png").hidden = false;
@@ -32,19 +35,21 @@ function exportToPNG(inputText) {
         link.href = canvas.toDataURL("image/png");
         link.download = `qr-code-${inputText}-${exportTime}.png`;
         link.click();
-        addRecentQRCode(inputText);
     });
 }
 
 function exportToPDF(inputText) {
     var qrCodeContainer = document.getElementById("qr-code");
     var exportTime = getCurrentTime();
-    html2canvas(qrCodeContainer).then(function(canvas) {
+    
+    html2canvas(qrCodeContainer).then(canvas => {
         var imgData = canvas.toDataURL("image/png");
-        var pdf = new window.jsPDF();
-        pdf.addImage(imgData, 'PNG', 10, 10);
+        var { jsPDF } = window.jspdf;
+        var pdf = new jsPDF();
+        pdf.addImage(imgData, 'PNG', 10, 10, 100, 100);
         pdf.save(`qr-code-${inputText}-${exportTime}.pdf`);
-        addRecentQRCode(inputText);
+    }).catch(err => {
+        console.error("Error generating PDF: ", err);
     });
 }
 
@@ -91,82 +96,6 @@ function showToast(message) {
         toast.classList.remove("show");
     }, 3000);
 }
-
-document.getElementById("close-toast").addEventListener("click", function () {
-    document.getElementById("toast").classList.remove("show");
-});
-
-function addRecentQRCode(inputText) {
-    var recentQRCodes = getRecentQRCodes();
-    if (!recentQRCodes.includes(inputText)) {
-        recentQRCodes.push(inputText);
-        setRecentQRCodes(recentQRCodes);
-        renderRecentQRCodes();
-    }
-}
-
-function getRecentQRCodes() {
-    var cookies = document.cookie.split("; ");
-    for (var i = 0; i < cookies.length; i++) {
-        var cookie = cookies[i].split("=");
-        if (cookie[0] === "recentQRCodes") {
-            return JSON.parse(decodeURIComponent(cookie[1]));
-        }
-    }
-    return [];
-}
-
-function setRecentQRCodes(recentQRCodes) {
-    document.cookie = "recentQRCodes=" + encodeURIComponent(JSON.stringify(recentQRCodes)) + "; path=/";
-}
-
-function deleteRecentQRCode(inputText) {
-    var recentQRCodes = getRecentQRCodes();
-    var index = recentQRCodes.indexOf(inputText);
-    if (index !== -1) {
-        recentQRCodes.splice(index, 1);
-        setRecentQRCodes(recentQRCodes);
-        renderRecentQRCodes();
-    }
-}
-
-function renderRecentQRCodes() {
-    var recentQRCodes = getRecentQRCodes();
-    var recentList = document.getElementById("recent-list");
-    recentList.innerHTML = "";
-    recentQRCodes.forEach(function(inputText) {
-        var listItem = document.createElement("li");
-        listItem.textContent = inputText;
-
-        var exportPNGButton = document.createElement("button");
-        exportPNGButton.textContent = "Export PNG";
-        exportPNGButton.addEventListener("click", function() {
-            exportToPNG(inputText);
-        });
-
-        var exportPDFButton = document.createElement("button");
-        exportPDFButton.textContent = "Export PDF";
-        exportPDFButton.addEventListener("click", function() {
-            exportToPDF(inputText);
-        });
-
-        var deleteButton = document.createElement("button");
-        deleteButton.textContent = "X";
-        deleteButton.addEventListener("click", function() {
-            deleteRecentQRCode(inputText);
-        });
-
-        listItem.appendChild(exportPNGButton);
-        listItem.appendChild(exportPDFButton);
-        listItem.appendChild(deleteButton);
-        recentList.appendChild(listItem);
-    });
-}
-
-document.addEventListener("DOMContentLoaded", function() {
-    document.getElementById("qr-input").focus();
-    renderRecentQRCodes();
-});
 
 document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("qr-input").value = ""; // Clear input field on page load
