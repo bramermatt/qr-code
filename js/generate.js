@@ -16,9 +16,6 @@ function generateQRCode() {
         document.getElementById("export-png").hidden = false;
         document.getElementById("export-pdf").hidden = false;
         document.getElementById("copy-to-clipboard").hidden = false;
-        // document.getElementById("export-svg").hidden = false;
-        // document.getElementById("export-jpeg").hidden = false;
-        // document.getElementById("export-gif").hidden = false;
     }
 }
 
@@ -35,7 +32,7 @@ function exportToPNG(inputText) {
         link.href = canvas.toDataURL("image/png");
         link.download = `qr-code-${inputText}-${exportTime}.png`;
         link.click();
-        addRecentQRCode(inputText); // Add to recent after export
+        addRecentQRCode(inputText);
     });
 }
 
@@ -47,7 +44,7 @@ function exportToPDF(inputText) {
         var pdf = new window.jsPDF();
         pdf.addImage(imgData, 'PNG', 10, 10);
         pdf.save(`qr-code-${inputText}-${exportTime}.pdf`);
-        addRecentQRCode(inputText); // Add to recent after export
+        addRecentQRCode(inputText);
     });
 }
 
@@ -61,89 +58,43 @@ document.getElementById("export-pdf").addEventListener("click", function() {
     exportToPDF(inputText);
 });
 
-document.getElementById("export-svg").addEventListener("click", function() {
-    var inputText = document.getElementById("qr-input").value;
-    exportToSVG(inputText);
-});
-
-document.getElementById("export-jpeg").addEventListener("click", function() {
-    var inputText = document.getElementById("qr-input").value;
-    exportToJPEG(inputText);
-});
-
-document.getElementById("export-gif").addEventListener("click", function() {
-    var inputText = document.getElementById("qr-input").value;
-    exportToGIF(inputText);
-});
-
-function exportToSVG(inputText) {
-    var qrCodeContainer = document.getElementById("qr-code");
-    var svgElement = qrCodeContainer.querySelector("svg");
-    if (svgElement) {
-        var serializer = new XMLSerializer();
-        var svgData = serializer.serializeToString(svgElement);
-        var svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
-        var svgUrl = URL.createObjectURL(svgBlob);
-        var link = document.createElement("a");
-        link.href = svgUrl;
-        link.download = `qr-code-${inputText}.svg`;
-        link.click();
-    }
-}
-
-function exportToJPEG(inputText) {
-    var qrCodeContainer = document.getElementById("qr-code");
-    var exportTime = getCurrentTime();
-    html2canvas(qrCodeContainer).then(function(canvas) {
-        var link = document.createElement("a");
-        link.href = canvas.toDataURL("image/jpeg");
-        link.download = `qr-code-${inputText}-${exportTime}.jpeg`;
-        link.click();
-    });
-}
-
-function exportToGIF(inputText) {
-    var qrCodeContainer = document.getElementById("qr-code");
-    var exportTime = getCurrentTime();
-    html2canvas(qrCodeContainer).then(function(canvas) {
-        var link = document.createElement("a");
-        link.href = canvas.toDataURL("image/gif");
-        link.download = `qr-code-${inputText}-${exportTime}.gif`;
-        link.click();
-    });
-}
 document.getElementById("copy-to-clipboard").addEventListener("click", function () {
-        var inputText = document.getElementById("qr-input").value;
-        if (inputText) {
-            navigator.clipboard.writeText(inputText).then(function () {
-                showToast("Copied to clipboard: " + inputText);
-            }).catch(function (error) {
-                console.error("Could not copy text: ", error);
+    var qrCodeContainer = document.getElementById("qr-code");
+    
+    html2canvas(qrCodeContainer).then(canvas => {
+        canvas.toBlob(blob => {
+            if (!blob) {
+                console.error("Failed to create image blob.");
+                return;
+            }
+
+            const item = new ClipboardItem({ "image/png": blob });
+            navigator.clipboard.write([item]).then(() => {
+                showToast("QR code copied to clipboard!");
+            }).catch(err => {
+                console.error("Failed to copy image: ", err);
             });
-        }
-
-    // Show toast notification
-    function showToast(message) {
-        var toast = document.getElementById("toast");
-        var toastMessage = document.getElementById("toast-message");
-
-        toastMessage.textContent = message;
-        toast.classList.add("show");
-
-        // Auto-hide after 3 seconds
-        setTimeout(function () {
-            toast.classList.remove("show");
-        }, 3000);
-    }
-
-    // Manual close for toast
-    document.getElementById("close-toast").addEventListener("click", function () {
-        document.getElementById("toast").classList.remove("show");
+        }, "image/png");
+    }).catch(err => {
+        console.error("html2canvas failed: ", err);
     });
 });
 
+function showToast(message) {
+    var toast = document.getElementById("toast");
+    var toastMessage = document.getElementById("toast-message");
 
+    toastMessage.textContent = message;
+    toast.classList.add("show");
 
+    setTimeout(function () {
+        toast.classList.remove("show");
+    }, 3000);
+}
+
+document.getElementById("close-toast").addEventListener("click", function () {
+    document.getElementById("toast").classList.remove("show");
+});
 
 function addRecentQRCode(inputText) {
     var recentQRCodes = getRecentQRCodes();
@@ -212,12 +163,11 @@ function renderRecentQRCodes() {
     });
 }
 
-// Focus on the input field when the page loads
 document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("qr-input").focus();
     renderRecentQRCodes();
 });
 
-
-
-
+document.addEventListener("DOMContentLoaded", function () {
+    document.getElementById("qr-input").value = ""; // Clear input field on page load
+});
