@@ -106,6 +106,8 @@ article {
 }
 
 
+
+
     #qr-code {
     width: 200px;
     height: 200px;
@@ -161,15 +163,15 @@ article {
         margin-top: 5vh;
     }
 
-header {
+footer {
     padding: 1em;
     text-align: center;
     font-size: small;
     max-width: 550px;
     margin: 0 auto;
 
-    /* position: sticky; */
-    top: 0;
+    position: sticky;
+    bottom: 0;
     left: 0;
     right: 0;
 
@@ -196,6 +198,12 @@ header {
     width: max-content;
 }
 
+#toast.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+
 .toast.show {
     opacity: 1;
     visibility: visible;
@@ -209,6 +217,20 @@ header {
     cursor: pointer;
 }
 
+#toast {
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.5s, visibility 0s 0.5s;
+    /* Customize the toast appearance */
+}
+
+#toast.show {
+    visibility: visible;
+    opacity: 1;
+    transition: opacity 0.5s;
+}
+
+
 
 a:link, a:visited {
     color: var(--text);
@@ -217,9 +239,9 @@ a:link, a:visited {
     font-weight: bold;
 }
 
-button {
+/* button {
     color: var(--text);
-}
+} */
 
 a:hover {
     color: var(--text);
@@ -235,4 +257,16 @@ a:hover {
         }
     }
 
+}
+
+.hidden {
+    display: none;
+}
+
+.clear-btn {
+    position: absolute; /* or relative, depending on your layout */
+    right: 10px; /* Adjust as necessary */
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
 }
