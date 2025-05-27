@@ -16,6 +16,7 @@ article {
         margin-bottom: 2vh;
     } */
 
+
     .create {
         display: flex;
         flex-direction: column;
@@ -26,12 +27,31 @@ article {
         }
     }
 
-    #qr-code {
+    .scanner {
+        display: flex;
+        flex-direction: column;
+        /* flex-wrap: wrap; */
+        gap: 1vh;
+
+        button {
+            max-width: max-content;
+        }
+    }
+
+    #qr-code, video {
         margin-top: 2vh;
         max-width: max-content;
         width: 100%;
 
         /* box-shadow: 0px 2px 2px grey; */
+        
+    }
+
+
+
+    video {
+        border-radius: 10px;
+        box-shadow: 0px 2px 2px grey;
     }
 
     .export {
@@ -76,23 +96,86 @@ article {
     .recent {
         margin-top: 2vh;
     }
+
+    h3 {
+        margin-top: 2vh;
+    }
+
+
+
 }
 
-footer {
+
+    #qr-code {
+    width: 200px;
+    height: 200px;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+
+
+#scan-history, #create-history {
+        padding: 1em;
+
+}
+
+#scan-history li,
+#create-history li {
+    /* list-style: none; */
+    padding: 0.5em;
+    /* border-bottom: thin solid var(--text); */
+    /* display: flex; */
+    /* justify-content: space-between; */
+    gap: 1vw;
+    /* align-items: center; */
+}
+
+#scan-history ul li:last-child,
+#create-history ul li:last-child {
+    border-bottom: none;
+}
+
+#scan-history ul li button,
+#create-history ul li button {
+    background-color: transparent;
+    color: var(--text);
+    cursor: pointer;
+    font-size: small;
+    padding: 0.5em;
+    border-radius: 5px;
+}
+
+#scan-history ul li button:hover,
+#create-history ul li button:hover {
+    background-color: var(--text);
+    color: white;
+}
+
+
+#qr-scanner {
+        margin-top: 5vh;
+    }
+
+header {
     padding: 1em;
     text-align: center;
     font-size: small;
     max-width: 550px;
     margin: 0 auto;
 
-    position: fixed;
-    bottom: 0;
+    /* position: sticky; */
+    top: 0;
     left: 0;
     right: 0;
 
     display: flex;
     justify-content: space-between;
-    z-index: -1;
+    /* z-index: -1; */
 }
 
 .toast {

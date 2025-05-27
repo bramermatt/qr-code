@@ -1,61 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>QR Code Generator</title>
+  <title>QR Code Studio</title>
 
-  <!-- Corrected script imports -->
+  <meta name="color-scheme" content="light dark" />
+
+  <link rel="stylesheet" href="style.css">
+
+  <!-- External Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://unpkg.com/@zxing/library@0.19.2/umd/index.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-
-  <!-- Custom CSS -->
-  <link rel="stylesheet" href="css/style.css">
-
-  <!-- Light/Dark Mode Favicon -->
-  <link rel="icon" href="img/qrcode-solid.svg" type="image/x-icon">
-  <link rel="alternate icon" href="img/qrcode-solid-white.svg" type="image/x-icon">
-
-
+  <!-- Favicon -->
+  <link rel="icon" href="img/qrcode-solid.svg" type="image/x-icon" />
+  <link rel="alternate icon" href="img/qrcode-solid-white.svg" type="image/x-icon" />
 </head>
-<body>
 
-<article>
-    <h1>QR Code Generator</h1>
-    <div class="create">
-        <input type="url" id="qr-input" placeholder="Enter URL" pattern="https?://.+">
-        <button onclick="generateQRCode()">Generate QR Code</button>
+<body class="min-h-screen flex flex-col items-center px-3 py-10">
+
+
+  <div class="w-full max-w-2xl bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+    <!-- Tab Buttons -->
+    <div class="flex justify-around border-b dark:border-gray-600 bg-gray-100 dark:bg-gray-700">
+    <button class="tab-btn flex-1 py-3 text-center font-semibold bg-white dark:bg-gray-800" data-tab="generator">
+      <i class="fa fa-bolt"></i> Generator
+    </button>
+    <button class="tab-btn flex-1 py-3 text-center font-semibold" data-tab="scanner">
+      <i class="fa fa-camera"></i> Scanner
+    </button>
+
     </div>
 
-    <div id="qr-code"></div>
+    <!-- Generator Tab -->
+    <article id="generator" class="tab-content p-6 hidden">
+      <h1 class="text-2xl font-bold mb-4">QR Code Generator</h1>
+      <div class="flex gap-2 mb-4">
+        <input type="url" id="qr-input" placeholder="Enter URL" pattern="https?://.+" class="flex-1 px-4 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+        <button onclick="generateQRCode()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"><i class="fa fa-bolt"></i></button>
+      </div>
 
-    <div class="export">
-        <button id="export-png" hidden><i class="fa-solid fa-file-image"></i> PNG</button>
-        <button id="export-pdf" hidden><i class="fa-solid fa-file-pdf"></i> PDF</button>
-        <button id="copy-to-clipboard" hidden><i class="fa-solid fa-file-clipboard"></i> Copy</button>
-    </div>
+      <div id="qr-code" class=""></div>
 
-    <!-- Toast Notification -->
-    <div id="toast" class="toast">
-        <span id="toast-message"></span>
-        <button id="close-toast">&times;</button>
-    </div>
-</article>
+      <div class="flex gap-3 mb-6 mt-4">
+        <button id="export-png" hidden class="bg-green-500 text-white px-3 py-2 rounded"><i class="fa fa-image"></i> PNG</button>
+        <button id="export-pdf" hidden class="bg-red-500 text-white px-3 py-2 rounded"><i class="fa fa-file-pdf"></i> PDF</button>
+        <button id="copy-to-clipboard" hidden class="bg-yellow-500 text-white px-3 py-2 rounded"><i class="fa fa-copy"></i> Copy</button>
+      </div>
 
-<footer>
-    <p>Created by <a href="https://www.mattbramer.com" target="_blank">Matt Bramer</a></p>
-    <p>Code on <a href="https://github.com/bramermatt/qr-code" target="_blank">GitHub</a></p>
-</footer>
+      <h3 class="text-lg font-semibold mb-2">Create History</h3>
+      <ul id="create-history" class="space-y-2 text-sm"></ul>
+    </article>
+
+    <!-- Scanner Tab -->
+    <article id="scanner" class="tab-content p-6 hidden">
+      <h1 class="text-2xl font-bold mb-4">QR Code Scanner</h1>
+
+      <div class="mb-4">
+        <video id="qr-video" class="border w-full rounded" autoplay></video>
+      </div>
+
+      <div class="flex gap-2 mb-4 justify-center">
+        <button id="start-scan" class="bg-blue-600 text-white px-4 py-2 rounded"><i class="fa fa-camera"></i> Start</button>
+        <button id="stop-scan" hidden class="bg-gray-600 text-white px-4 py-2 rounded"><i class="fa fa-stop"></i> Stop</button>
+      </div>
+
+      <div id="scan-result" class="mb-6 font-medium text-center text-green-600 dark:text-green-400"></div>
+
+      <h3 class="text-lg font-semibold mb-2">Scan History</h3>
+      <ul id="scan-history" class="space-y-2 text-sm"></ul>
+    </article>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-black text-white px-6 py-3 rounded shadow hidden">
+    <span id="toast-message"></span>
+    <button id="close-toast" class="ml-4 text-white font-bold">&times;</button>
+  </div>
+
+  <!-- Intro Message -->
+<div id="intro-message" class="p-5 mt-4 max-w-2xl rounded-[10px] bg-gray-50 dark:bg-gray-700">
+  <p class="pd-1 text-sm sm:text-base">
+    Welcome! Use the <strong>Generator</strong> to create QR codes from links, or try the <strong>Scanner</strong> to read them using your camera.
+  </p>
+</div>
+</div>
+
+
+    <footer class="text-center mb-6 mt-5"></footer>
+    <p class="text-sm">Created by <a class="underline text-blue-600 dark:text-blue-400" href="https://www.mattbramer.com" target="_blank">Matt Bramer</a></p>
+    <p class="text-sm">Code on <a class="underline text-blue-600 dark:text-blue-400" href="https://github.com/bramermatt/qr-code" target="_blank">GitHub</a></p>
+    </footer>
+
+  <!-- Scripts -->
+  <script src="js/generate.js"></script>
+  <script src="js/scanner.js"></script>
+  <script>
+    
+    // Tab logic
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
+    document.getElementById(tab).classList.remove("hidden");
+
+    // Remove active class from all buttons and highlight current one
+    document.querySelectorAll(".tab-btn").forEach(b => {
+      b.classList.remove("bg-white", "dark:bg-gray-800", "font-bold");
+    });
+    btn.classList.add("bg-white", "dark:bg-gray-800", "font-bold");
+
+    // Hide intro message on first tab click
+    const intro = document.getElementById("intro-message");
+    if (intro) intro.classList.add("hidden");
+  });
+});
+
+
+    // Toast close
+    document.getElementById("close-toast").addEventListener("click", () => {
+      document.getElementById("toast").classList.add("hidden");
+    });
+  </script>
+
+  <style>
+  a {
+    font-weight: bold;
+    text-decoration: underline;
+  }
+
+   a:hover {
+    text-decoration: none;
+  }
+</style>
 
 </body>
-
-  <!-- JavaScript -->
-  <script src="js/generate.js"></script>
-
-  
 </html>
