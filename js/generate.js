@@ -63,6 +63,8 @@ function generateQRCode() {
         height: 200
     });
 
+    document.getElementById('qr-input').blur();
+
     // Show the export options (PNG, PDF, Clipboard)
     document.getElementById("export-png").hidden = false;
     document.getElementById("export-pdf").hidden = false;

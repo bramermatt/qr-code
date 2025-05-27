@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    // ZXing QR code reader
     const codeReader = new ZXing.BrowserQRCodeReader();
     let selectedDeviceId;
     let scanning = false;
@@ -6,38 +7,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     migrateOldHistory();
     renderScanHistory();
 
-    const cameraSelect = document.getElementById("camera-select");
+    // DOM elements
     const startScanBtn = document.getElementById("start-scan");
     const stopScanBtn = document.getElementById("stop-scan");
     const videoElement = document.getElementById('qr-video');
+    const scanResult = document.getElementById('scan-result');
 
-    // Populate camera dropdown
+    // Get available cameras and select the first one
     const devices = await codeReader.listVideoInputDevices();
-    devices.forEach(device => {
-        const option = document.createElement("option");
-        option.value = device.deviceId;
-        option.text = device.label || `Camera ${cameraSelect.length + 1}`;
-        cameraSelect.appendChild(option);
-    });
-
-    selectedDeviceId = devices.length > 1 ? devices[1]?.deviceId : devices[0]?.deviceId;
-
-    // Handle camera change
-    cameraSelect.addEventListener("change", async (e) => {
-        selectedDeviceId = e.target.value;
-        if (scanning) {
-            await startCameraScan(); // restart stream with new camera
-        }
-    });
+    selectedDeviceId = devices[1]?.deviceId;
 
     // Start scan
     startScanBtn.addEventListener('click', async () => {
         scanning = true;
         startScanBtn.hidden = true;
         stopScanBtn.hidden = false;
-        cameraSelect.hidden = false; // Keep camera selector visible
         videoElement.hidden = false;
-
+        scanResult.textContent = "";
         await startCameraScan();
     });
 
@@ -47,7 +33,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         startScanBtn.hidden = false;
         stopScanBtn.hidden = true;
         videoElement.hidden = true;
-
         codeReader.reset();
         if (videoElement.srcObject) {
             videoElement.srcObject.getTracks().forEach(track => track.stop());
@@ -55,6 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // Start camera and scan
     async function startCameraScan() {
         try {
             // Stop existing stream before starting new one
@@ -62,7 +48,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 videoElement.srcObject.getTracks().forEach(track => track.stop());
                 videoElement.srcObject = null;
             }
-
             await codeReader.decodeFromVideoDevice(selectedDeviceId, videoElement, (result, err) => {
                 if (result) {
                     handleScanResult(result.text);
@@ -71,7 +56,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     console.error("QR Decode error:", err);
                 }
             });
-
             videoElement.hidden = false;
         } catch (e) {
             console.error("Camera access error:", e);
@@ -79,9 +63,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Handle scan result
     function handleScanResult(text) {
         let formattedText = text.trim();
-
         if (!formattedText.startsWith('http://') && !formattedText.startsWith('https://')) {
             formattedText = 'https://www.' + formattedText;
         }
@@ -91,7 +75,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         startScanBtn.hidden = false;
         stopScanBtn.hidden = true;
         videoElement.hidden = true;
-
         codeReader.reset();
         if (videoElement.srcObject) {
             videoElement.srcObject.getTracks().forEach(track => track.stop());
@@ -99,24 +82,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // Display result
-        const resultContainer = document.getElementById('scan-result');
-        resultContainer.innerHTML = `<a href="${formattedText}" target="_blank">${formattedText}</a>`;
+        scanResult.innerHTML = `<a href="${formattedText}" target="_blank">${formattedText}</a>`;
 
-        document.getElementById("export-png").hidden = false;
-        document.getElementById("export-pdf").hidden = false;
-        document.getElementById("copy-to-clipboard").hidden = false;
-        document.getElementById("go-to-link").hidden = false;
-
-        const goToLinkBtn = document.getElementById("go-to-link");
-        goToLinkBtn.href = formattedText;
-        goToLinkBtn.onclick = (e) => {
-            window.open(formattedText, "_blank");
-            e.preventDefault();
-        };
-
+        // Add to scan history
         addScanHistory(formattedText);
     }
 
+    // Add scan to history
     function addScanHistory(text) {
         let scans = JSON.parse(localStorage.getItem('scanHistory') || "[]");
         const alreadyExists = scans.some(entry => entry.text === text);
@@ -131,15 +103,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Render scan history
     function renderScanHistory() {
         let scans = JSON.parse(localStorage.getItem('scanHistory') || "[]");
         const ul = document.getElementById('scan-history');
+        if (!ul) return;
         ul.innerHTML = '';
-
         scans.forEach((entry, index) => {
             const li = document.createElement('li');
             li.className = "group flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded-md shadow hover:bg-gray-100 dark:hover:bg-gray-700";
-
             li.innerHTML = `
                 <div class="flex items-center space-x-2 overflow-hidden">
                     <i class="fa-solid fa-qrcode text-gray-500"></i>
@@ -155,7 +127,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </button>
                 </div>
             `;
-
             ul.appendChild(li);
 
             li.querySelector('.copy-btn')?.addEventListener('click', () => {
@@ -172,18 +143,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // Delete scan history entry
     function deleteScanHistoryEntry(index) {
         let scans = JSON.parse(localStorage.getItem('scanHistory') || "[]");
         scans.splice(index, 1);
         localStorage.setItem('scanHistory', JSON.stringify(scans));
         renderScanHistory();
     }
-
-    renderScanHistory();
 });
 
-
-
+// Migrate old history (string array to object array)
 function migrateOldHistory() {
     let scans = JSON.parse(localStorage.getItem('scanHistory') || "[]");
     if (scans.length > 0 && typeof scans[0] === "string") {
@@ -195,90 +164,14 @@ function migrateOldHistory() {
     }
 }
 
-
-// Copy QR code to clipboard functionality
-document.getElementById("copy-to-clipboard").addEventListener("click", function () {
-    var qrCodeContainer = document.getElementById("qr-code");
-    var range = document.createRange();
-    range.selectNode(qrCodeContainer);
-    window.getSelection().removeAllRanges(); // Clear previous selections
-    window.getSelection().addRange(range);
-
-    try {
-        document.execCommand('copy');
-        alert("QR code copied to clipboard!");
-    } catch (err) {
-        console.error("Failed to copy QR code: ", err);
-        alert("Failed to copy QR code. Please try again.");
-    }
-
-    window.getSelection().removeAllRanges(); // Clear selection after copying
-});
-
-
-
+// Toast notification
 function showToast(message) {
     const toast = document.getElementById("toast");
     const toastMessage = document.getElementById("toast-message");
-
+    if (!toast || !toastMessage) return;
     toastMessage.textContent = message;
     toast.classList.add("show");
-
     setTimeout(function () {
         toast.classList.remove("show");
     }, 3000);
 }
-
-
-document.getElementById("copy-to-clipboard").addEventListener("click", function () {
-    const qrCanvas = document.querySelector('#qr-code canvas');
-
-    if (!qrCanvas) {
-        console.error("QR canvas not found");
-        return;
-    }
-
-    console.log("QR Canvas found. Creating blob..."); // 🔍 Debug log
-
-    qrCanvas.toBlob(blob => {
-        if (!blob) {
-            console.error("Failed to create image blob.");
-            return;
-        }
-
-        console.log("Blob created successfully: ", blob); // 🔍 Debug log
-
-        const item = new ClipboardItem({ "image/png": blob });
-        navigator.clipboard.write([item]).then(() => {
-            console.log("QR code copied to clipboard!");
-            showToast("QR code copied to clipboard!");
-        }).catch(err => {
-            console.error("Failed to copy image: ", err);
-            showToast("Failed to copy QR code.");
-        });
-    }, "image/png");
-});
-
-
-document.addEventListener("DOMContentLoaded", function () {
-    // Get elements
-    const startScanBtn = document.getElementById("start-scan");
-    const cameraSelect = document.getElementById("camera-select");
-    const cameraSelectLabel = document.getElementById("camera-select-label");
-
-    // Start scan button click event
-    startScanBtn.addEventListener("click", function () {
-        // Show the camera select dropdown
-        cameraSelect.classList.remove("hidden");
-        cameraSelectLabel.classList.remove("hidden");
-
-        // You can add logic here to start the camera scanning if necessary
-        startCameraScan();
-    });
-
-    // Function to start the camera scan (you can add your camera initialization logic here)
-    function startCameraScan() {
-        console.log("Starting camera scan...");
-        // Example: Scan logic goes here (like accessing the camera, etc.)
-    }
-});
