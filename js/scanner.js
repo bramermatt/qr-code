@@ -2,10 +2,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const codeReader = new ZXing.BrowserQRCodeReader();
     let selectedDeviceId;
     let scanning = false;
+
     migrateOldHistory();
     renderScanHistory();
 
     const cameraSelect = document.getElementById("camera-select");
+    const startScanBtn = document.getElementById("start-scan");
+    const stopScanBtn = document.getElementById("stop-scan");
+    const videoElement = document.getElementById('qr-video');
 
     // Populate camera dropdown
     const devices = await codeReader.listVideoInputDevices();
@@ -16,32 +20,48 @@ document.addEventListener('DOMContentLoaded', async () => {
         cameraSelect.appendChild(option);
     });
 
-    // Default to first device or let the user select
-    selectedDeviceId = devices.length > 1 ? devices[1]?.deviceId : devices[0]?.deviceId; // Select rear camera by default
+    selectedDeviceId = devices.length > 1 ? devices[1]?.deviceId : devices[0]?.deviceId;
 
-    cameraSelect.addEventListener("change", (e) => {
+    // Handle camera change
+    cameraSelect.addEventListener("change", async (e) => {
         selectedDeviceId = e.target.value;
+        if (scanning) {
+            await startCameraScan(); // restart stream with new camera
+        }
     });
 
-    // Update QR scan when button is clicked
-    document.getElementById('start-scan').addEventListener('click', async () => {
+    // Start scan
+    startScanBtn.addEventListener('click', async () => {
         scanning = true;
-        document.getElementById('start-scan').hidden = true;
-        document.getElementById('stop-scan').hidden = false;
-        const videoElement = document.getElementById('qr-video');
-        document.getElementById('scan-result').textContent = "";
+        startScanBtn.hidden = true;
+        stopScanBtn.hidden = false;
+        cameraSelect.hidden = false; // Keep camera selector visible
+        videoElement.hidden = false;
 
+        await startCameraScan();
+    });
+
+    // Stop scan
+    stopScanBtn.addEventListener('click', () => {
+        scanning = false;
+        startScanBtn.hidden = false;
+        stopScanBtn.hidden = true;
+        videoElement.hidden = true;
+
+        codeReader.reset();
+        if (videoElement.srcObject) {
+            videoElement.srcObject.getTracks().forEach(track => track.stop());
+            videoElement.srcObject = null;
+        }
+    });
+
+    async function startCameraScan() {
         try {
-            await navigator.mediaDevices.getUserMedia({ video: true });
-
-            const devices = await codeReader.listVideoInputDevices();
-            if (devices.length === 0) {
-                alert("No camera found.");
-                return;
+            // Stop existing stream before starting new one
+            if (videoElement.srcObject) {
+                videoElement.srcObject.getTracks().forEach(track => track.stop());
+                videoElement.srcObject = null;
             }
-
-            // Reinitialize video stream based on selected camera
-            selectedDeviceId = selectedDeviceId || devices[0].deviceId;
 
             await codeReader.decodeFromVideoDevice(selectedDeviceId, videoElement, (result, err) => {
                 if (result) {
@@ -57,93 +77,100 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error("Camera access error:", e);
             alert("Could not access the camera. Please check permissions and HTTPS.");
         }
-    });
+    }
 
+    function handleScanResult(text) {
+        let formattedText = text.trim();
 
+        if (!formattedText.startsWith('http://') && !formattedText.startsWith('https://')) {
+            formattedText = 'https://www.' + formattedText;
+        }
 
-
-    document.getElementById('stop-scan').addEventListener('click', () => {
+        // Stop scanning
         scanning = false;
-        document.getElementById('start-scan').hidden = false;
-        document.getElementById('stop-scan').hidden = true;
+        startScanBtn.hidden = false;
+        stopScanBtn.hidden = true;
+        videoElement.hidden = true;
+
         codeReader.reset();
-        const videoElement = document.getElementById('qr-video');
         if (videoElement.srcObject) {
             videoElement.srcObject.getTracks().forEach(track => track.stop());
             videoElement.srcObject = null;
         }
-    });
 
-    function handleScanResult(text) {
+        // Display result
         const resultContainer = document.getElementById('scan-result');
-        resultContainer.innerHTML = `<a href="${text}" target="_blank">${text}</a>`;
-        addScanHistory(text);
-    }
+        resultContainer.innerHTML = `<a href="${formattedText}" target="_blank">${formattedText}</a>`;
 
-function addScanHistory(text) {
-    let scans = JSON.parse(localStorage.getItem('scanHistory') || "[]");
-    const alreadyExists = scans.some(entry => entry.text === text);
-    if (!alreadyExists) {
-        const entry = {
-            text: text,
-            timestamp: new Date().toISOString()
+        document.getElementById("export-png").hidden = false;
+        document.getElementById("export-pdf").hidden = false;
+        document.getElementById("copy-to-clipboard").hidden = false;
+        document.getElementById("go-to-link").hidden = false;
+
+        const goToLinkBtn = document.getElementById("go-to-link");
+        goToLinkBtn.href = formattedText;
+        goToLinkBtn.onclick = (e) => {
+            window.open(formattedText, "_blank");
+            e.preventDefault();
         };
-        scans.push(entry);
-        localStorage.setItem('scanHistory', JSON.stringify(scans));
-        renderScanHistory();
+
+        addScanHistory(formattedText);
     }
-}
 
+    function addScanHistory(text) {
+        let scans = JSON.parse(localStorage.getItem('scanHistory') || "[]");
+        const alreadyExists = scans.some(entry => entry.text === text);
+        if (!alreadyExists) {
+            const entry = {
+                text: text,
+                timestamp: new Date().toISOString()
+            };
+            scans.push(entry);
+            localStorage.setItem('scanHistory', JSON.stringify(scans));
+            renderScanHistory();
+        }
+    }
 
-function renderScanHistory() {
-    let scans = JSON.parse(localStorage.getItem('scanHistory') || "[]");
-    const ul = document.getElementById('scan-history');
-    ul.innerHTML = '';
+    function renderScanHistory() {
+        let scans = JSON.parse(localStorage.getItem('scanHistory') || "[]");
+        const ul = document.getElementById('scan-history');
+        ul.innerHTML = '';
 
-    scans.forEach((entry, index) => {
-        const li = document.createElement('li');
-        li.className = "group flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded-md shadow hover:bg-gray-100 dark:hover:bg-gray-700";
+        scans.forEach((entry, index) => {
+            const li = document.createElement('li');
+            li.className = "group flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded-md shadow hover:bg-gray-100 dark:hover:bg-gray-700";
 
-        li.innerHTML = `
-            <div class="flex items-center space-x-2 overflow-hidden">
-                <i class="fa-solid fa-qrcode text-gray-500"></i>
-                <a href="${entry.text}" target="_blank" class="truncate">${entry.text}</a>
-                <small class="text-gray-400 truncate pr-2">(${new Date(entry.timestamp).toLocaleString()})</small>
-            </div>
-            <div class="flex items-center space-x-2">
-                <button class="copy-btn text-blue-500 hover:text-blue-700 group-hover:inline" data-index="${index}" title="Copy to clipboard">
-                    <i class="fa fa-copy"></i>
-                </button>
-                <button class="delete-btn text-red-500 hover:text-red-700 group-hover:inline" data-index="${index}" title="Delete">
-                    <i class="fa fa-trash"></i>
-                </button>
-            </div>
-        `;
+            li.innerHTML = `
+                <div class="flex items-center space-x-2 overflow-hidden">
+                    <i class="fa-solid fa-qrcode text-gray-500"></i>
+                    <a href="${entry.text}" target="_blank" class="truncate">${entry.text}</a>
+                    <small class="text-gray-400 truncate pr-2">(${new Date(entry.timestamp).toLocaleString()})</small>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button class="copy-btn text-blue-500 hover:text-blue-700 group-hover:inline" data-index="${index}" title="Copy to clipboard">
+                        <i class="fa fa-copy"></i>
+                    </button>
+                    <button class="delete-btn text-red-500 hover:text-red-700 group-hover:inline" data-index="${index}" title="Delete">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                </div>
+            `;
 
-        // Append to the DOM first
-        ul.appendChild(li);
+            ul.appendChild(li);
 
-        // Then add event listeners
-        const copyBtn = li.querySelector('.copy-btn');
-        if (copyBtn) {
-            copyBtn.addEventListener('click', () => {
-                console.log("Copy clicked:", entry.text); // 🔍 Debug log
+            li.querySelector('.copy-btn')?.addEventListener('click', () => {
                 navigator.clipboard.writeText(entry.text).then(() => {
                     showToast("Copied to clipboard!");
                 }).catch(() => {
                     showToast("Failed to copy.");
                 });
             });
-        }
 
-
-        const deleteBtn = li.querySelector('.delete-btn');
-        if (deleteBtn) {
-            deleteBtn.addEventListener('click', () => {
+            li.querySelector('.delete-btn')?.addEventListener('click', () => {
                 deleteScanHistoryEntry(index);
             });
-        }
-    });
+        });
+    }
 
     function deleteScanHistoryEntry(index) {
         let scans = JSON.parse(localStorage.getItem('scanHistory') || "[]");
@@ -151,11 +178,11 @@ function renderScanHistory() {
         localStorage.setItem('scanHistory', JSON.stringify(scans));
         renderScanHistory();
     }
-}
-
 
     renderScanHistory();
 });
+
+
 
 function migrateOldHistory() {
     let scans = JSON.parse(localStorage.getItem('scanHistory') || "[]");

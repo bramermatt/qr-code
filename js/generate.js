@@ -39,32 +39,49 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Generate QR code
 function generateQRCode() {
-    const input = document.getElementById("qr-input");
-    const text = input.value.trim();
-    const qrCodeContainer = document.getElementById("qr-code");
+    let qrInput = document.getElementById('qr-input').value.trim();
 
-    qrCodeContainer.innerHTML = ""; // Clear previous QR code
+    // Ensure the input has the correct URL format
+    if (!qrInput.startsWith('http://') && !qrInput.startsWith('https://')) {
+        qrInput = 'https://www.' + qrInput;
+    }
+
+    // Clear any previous QR code
+    const qrCodeContainer = document.getElementById("qr-code");
+    qrCodeContainer.innerHTML = ""; 
 
     // Ensure QR code text isn't empty
-    if (text === "") {
+    if (qrInput === "") {
         alert("Please enter a valid text for the QR code!");
         return;
     }
 
-    // Create a new QR code
+    // Generate the QR code with the corrected URL
     new QRCode(qrCodeContainer, {
-        text: text,
+        text: qrInput,   // Use qrInput as the URL or text
         width: 200,
         height: 200
     });
 
+    // Show the export options (PNG, PDF, Clipboard)
     document.getElementById("export-png").hidden = false;
     document.getElementById("export-pdf").hidden = false;
     document.getElementById("copy-to-clipboard").hidden = false;
+    document.getElementById("go-to-link").hidden = false;
 
-    // Save the creation to history
-    addCreateHistory(text);
+    // Set the href and click handler for the "Go to Link" button
+    const goToLinkBtn = document.getElementById("go-to-link");
+    goToLinkBtn.href = qrInput;
+    goToLinkBtn.onclick = function (e) {
+        // Open the link in a new tab
+        window.open(qrInput, "_blank");
+        e.preventDefault();
+    };
+
+    // Save the creation to history (if necessary)
+    addCreateHistory(qrInput);
 }
+
 
 // Get current time formatted for file name
 function getCurrentTime() {
