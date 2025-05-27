@@ -5,66 +5,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     migrateOldHistory();
     renderScanHistory();
 
+    const cameraSelect = document.getElementById("camera-select");
 
-        const cameraSelect = document.getElementById("camera-select");
-
-        // Populate camera dropdown
-        const devices = await codeReader.listVideoInputDevices();
-
-        devices.forEach(device => {
+    // Populate camera dropdown
+    const devices = await codeReader.listVideoInputDevices();
+    devices.forEach(device => {
         const option = document.createElement("option");
         option.value = device.deviceId;
         option.text = device.label || `Camera ${cameraSelect.length + 1}`;
         cameraSelect.appendChild(option);
-        });
+    });
 
-        // Update selected device ID from dropdown
-        cameraSelect.addEventListener("change", (e) => {
+    // Default to first device or let the user select
+    selectedDeviceId = devices.length > 1 ? devices[1]?.deviceId : devices[0]?.deviceId; // Select rear camera by default
+
+    cameraSelect.addEventListener("change", (e) => {
         selectedDeviceId = e.target.value;
-        });
+    });
 
-        // Default to first device
-        selectedDeviceId = devices[0]?.deviceId;
+    // Update QR scan when button is clicked
+    document.getElementById('start-scan').addEventListener('click', async () => {
+        scanning = true;
+        document.getElementById('start-scan').hidden = true;
+        document.getElementById('stop-scan').hidden = false;
+        const videoElement = document.getElementById('qr-video');
+        document.getElementById('scan-result').textContent = "";
 
+        try {
+            await navigator.mediaDevices.getUserMedia({ video: true });
 
+            const devices = await codeReader.listVideoInputDevices();
+            if (devices.length === 0) {
+                alert("No camera found.");
+                return;
+            }
 
+            // Reinitialize video stream based on selected camera
+            selectedDeviceId = selectedDeviceId || devices[0].deviceId;
 
-document.getElementById('start-scan').addEventListener('click', async () => {
-    scanning = true;
-    document.getElementById('start-scan').hidden = true;
-    document.getElementById('stop-scan').hidden = false;
-    const videoElement = document.getElementById('qr-video');
-    document.getElementById('scan-result').textContent = "";
+            await codeReader.decodeFromVideoDevice(selectedDeviceId, videoElement, (result, err) => {
+                if (result) {
+                    handleScanResult(result.text);
+                }
+                if (err && !(err instanceof ZXing.NotFoundException)) {
+                    console.error("QR Decode error:", err);
+                }
+            });
 
-    try {
-        // Force permission prompt
-        await navigator.mediaDevices.getUserMedia({ video: true });
-
-        const devices = await codeReader.listVideoInputDevices();
-        console.log("Video devices:", devices);
-
-        if (devices.length === 0) {
-            alert("No camera found.");
-            return;
+            videoElement.hidden = false;
+        } catch (e) {
+            console.error("Camera access error:", e);
+            alert("Could not access the camera. Please check permissions and HTTPS.");
         }
+    });
 
-        selectedDeviceId = devices[0].deviceId;
 
-        await codeReader.decodeFromVideoDevice(selectedDeviceId, videoElement, (result, err) => {
-            if (result) {
-                handleScanResult(result.text);
-            }
-            if (err && !(err instanceof ZXing.NotFoundException)) {
-                console.error("QR Decode error:", err);
-            }
-        });
-
-        videoElement.hidden = false;
-    } catch (e) {
-        console.error("Camera access error:", e);
-        alert("Could not access the camera. Please check permissions and HTTPS.");
-    }
-});
 
 
     document.getElementById('stop-scan').addEventListener('click', () => {
