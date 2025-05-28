@@ -42,8 +42,15 @@ function generateQRCode() {
     let qrInput = document.getElementById('qr-input').value.trim();
 
     // Ensure the input has the correct URL format
-    if (!qrInput.startsWith('http://') && !qrInput.startsWith('https://')) {
-        qrInput = 'https://www.' + qrInput;
+    if (
+        !qrInput.startsWith('http://') &&
+        !qrInput.startsWith('https://')
+    ) {
+        if (!qrInput.startsWith('www.')) {
+            qrInput = 'https://www.' + qrInput;
+        } else {
+            qrInput = 'https://' + qrInput;
+        }
     }
 
     // Clear any previous QR code
