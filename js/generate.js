@@ -41,16 +41,12 @@ document.addEventListener("DOMContentLoaded", function () {
 function generateQRCode() {
     let qrInput = document.getElementById('qr-input').value.trim();
 
-    // Ensure the input has the correct URL format
+    // Only add https:// if no protocol is present
     if (
         !qrInput.startsWith('http://') &&
         !qrInput.startsWith('https://')
     ) {
-        if (!qrInput.startsWith('www.')) {
-            qrInput = 'https://www.' + qrInput;
-        } else {
-            qrInput = 'https://' + qrInput;
-        }
+        qrInput = 'https://' + qrInput;
     }
 
     // Clear any previous QR code
